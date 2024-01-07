@@ -21,50 +21,41 @@ func Routers() {
 	defer db.Close()
 	log.Println("Starting the HTTP server on port 9080")
 	router := mux.NewRouter()
-	router.HandleFunc("/users",
-		GetUsers).Methods("GET")
-	router.HandleFunc("/users",
-		CreateUser).Methods("POST")
-	router.HandleFunc("/users/{id}",
-		GetUser).Methods("GET")
-	router.HandleFunc("/users/{id}",
-		UpdateUser).Methods("PUT")
-	router.HandleFunc("/users/{id}",
-		DeleteUser).Methods("DELETE")
-	http.ListenAndServe(":9080",
-		&CORSRouterDecorator{router})
+	router.HandleFunc("/api/reports", GetReports).Methods("GET")
+	router.HandleFunc("/api/reports", CreateReport).Methods("POST")
+	router.HandleFunc("/api/report/{id}", GetReport).Methods("GET")
+	router.HandleFunc("/api/report/{id}", UpdateReport).Methods("PUT")
+	router.HandleFunc("/api/report/{id}", DeleteReport).Methods("DELETE")
+	http.ListenAndServe(":9080", &CORSRouterDecorator{router})
 }
 
-/***************************************************/
-
-//Get all users
-func GetUsers(w http.ResponseWriter, r *http.Request) {
+// Get all reports
+func GetReports(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var users []User
+	var reports []Report
 
-	result, err := db.Query("SELECT id, nim," +
-		"nama,tgl_lahir,alamat,jenis_kelamin,kelas from mahasiswa")
+	result, err := db.Query("SELECT id, date, description, amount, status, receiver, jk, no_telp, address FROM transaksi_keuangansusanti")
 	if err != nil {
 		panic(err.Error())
 	}
 	defer result.Close()
 	for result.Next() {
-		var user User
-		err := result.Scan(&user.ID, &user.NIM,
-			&user.Nama, &user.TglLahir, &user.Alamat, &user.JenisKelamin, &user.Kelas)
+		var report Report
+		err := result.Scan(&report.ID, &report.Date,
+			&report.Description, &report.Amount, &report.Status, &report.Receiver, &report.Jk, &report.No_telp, &report.Address)
 		if err != nil {
 			panic(err.Error())
 		}
-		users = append(users, user)
+		reports = append(reports, report)
 	}
-	json.NewEncoder(w).Encode(users)
+	json.NewEncoder(w).Encode(reports)
 }
 
-//Create user
-func CreateUser(w http.ResponseWriter, r *http.Request) {
+// Create user
+func CreateReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	stmt, err := db.Prepare("INSERT INTO mahasiswa(nim," +
-		"nama,tgl_lahir,alamat,jenis_kelamin,kelas) VALUES(?,?,?,?,?,?)")
+	stmt, err := db.Prepare("INSERT INTO transaksi_keuangansusanti(date," +
+		"description,amount,status,receiver,jk, no_telp,address) VALUES(?,?,?,?,?,?,?,?)")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -72,50 +63,44 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	keyVal := make(map[string]string)
-	json.Unmarshal(body, &keyVal)
-	nim := keyVal["nim"]
-	nama := keyVal["nama"]
-	tgl_lahir := keyVal["tgl_lahir"]
-	alamat := keyVal["alamat"]
-	jenis_kelamin := keyVal["jenis_kelamin"]
-	kelas := keyVal["kelas"]
-	// print jenis_kelamin
-	fmt.Println(jenis_kelamin)
-	_, err = stmt.Exec(nim, nama, tgl_lahir, alamat, jenis_kelamin, kelas)
+	var report Report
+	err = json.Unmarshal(body, &report)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Fprintf(w, "New user was created")
+	_, err = stmt.Exec(report.Date, report.Description, report.Amount, report.Status, report.Receiver, report.Jk, report.No_telp, report.Address)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Fprintf(w, "Transaksi berhasil diinput")
 }
 
-//Get user by ID
-func GetUser(w http.ResponseWriter, r *http.Request) {
+// Get user by ID
+func GetReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	result, err := db.Query("SELECT id, nim,"+
-		"nama,tgl_lahir,alamat,jenis_kelamin,kelas from mahasiswa WHERE id = ?", params["id"])
+	result, err := db.Query("SELECT id, date,"+
+		"description,amount,status,receiver,jk, no_telp,address FROM transaksi_keuangansusanti WHERE id = ?", params["id"])
 	if err != nil {
 		panic(err.Error())
 	}
 	defer result.Close()
-	var user User
+	var report Report
 	for result.Next() {
-		err := result.Scan(&user.ID, &user.NIM,
-			&user.Nama, &user.TglLahir, &user.Alamat, &user.JenisKelamin, &user.Kelas)
+		err := result.Scan(&report.ID, &report.Date,
+			&report.Description, &report.Amount, &report.Status, &report.Receiver, &report.Jk, &report.No_telp, &report.Address)
 		if err != nil {
 			panic(err.Error())
 		}
 	}
-	json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(report)
 }
 
-//Update user
-func UpdateUser(w http.ResponseWriter, r *http.Request) {
+// Update user
+func UpdateReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	stmt, err := db.Prepare("UPDATE mahasiswa SET nim = ?," +
-		"nama= ?, tgl_lahir=?, alamat=?, jenis_kelamin=?, kelas=? WHERE id = ?")
+	stmt, err := db.Prepare("UPDATE transaksi_keuangansusanti SET date= ?, description=?, amount=?, status=?, receiver=?, jk=?, no_telp=?, address=? WHERE id = ?")
 
 	if err != nil {
 		panic(err.Error())
@@ -124,28 +109,24 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	keyVal := make(map[string]string)
-	json.Unmarshal(body, &keyVal)
-	nim := keyVal["nim"]
-	nama := keyVal["nama"]
-	tgl_lahir := keyVal["tgl_lahir"]
-	alamat := keyVal["alamat"]
-	jenis_kelamin := keyVal["jenis_kelamin"]
-	kelas := keyVal["kelas"]
-	_, err = stmt.Exec(nim, nama, tgl_lahir, alamat, jenis_kelamin, kelas, params["id"])
+	var report Report
+	err = json.Unmarshal(body, &report)
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Fprintf(w, "User with ID = %s was updated",
+	_, err = stmt.Exec(report.Date, report.Description, report.Amount, report.Status, report.Receiver, report.Jk, report.No_telp, report.Address, params["id"])
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Fprintf(w, "Report with ID = %s was updated",
 		params["id"])
 }
 
-
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
+// Delete user
+func DeleteReport(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	// stmt, err := db.Prepare("DELETE FROM users WHERE id = ?")
-	stmt, err := db.Prepare("DELETE FROM mahasiswa WHERE id = ?")
+	stmt, err := db.Prepare("DELETE FROM transaksi_keuangansusanti WHERE id = ?")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -153,36 +134,33 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err.Error())
 	}
-	fmt.Fprintf(w, "User with ID = %s was deleted",
+	fmt.Fprintf(w, "Report with ID = %s was deleted",
 		params["id"])
 }
 
-
-
-type User struct {
-	ID        string `json:"id"`
-	NIM		   string `json:"nim"`
-	Nama      string `json:"nama"`
-	TglLahir  string `json:"tgl_lahir"`
-	Alamat    string `json:"alamat"`
-	JenisKelamin	string `json:"jenis_kelamin"`
-	Kelas     string `json:"kelas"`
-
+type Report struct {
+	ID          int    `json:"id"`
+	Date        string `json:"date"`
+	Description string `json:"description"`
+	Amount      string `json:"amount"`
+	Status      string `json:"status"`
+	Receiver    string `json:"receiver"`
+	Jk          string `json:"jk"`
+	No_telp     string `json:"no_telp"`
+	Address     string `json:"address"`
 }
-
 
 var db *sql.DB
 var err error
 
 func InitDB() {
 	db, err = sql.Open("mysql",
-		"root:@tcp(127.0.0.1:3306)/DB_Kuliah")
+		"root:@tcp(127.0.0.1:3306)/db_2204534_susanti_uas_pilkomB")
+	fmt.Println("connected to db")
 	if err != nil {
 		panic(err.Error())
 	}
 }
-
-/***************************************************/
 
 // CORSRouterDecorator applies CORS headers to a mux.Router
 type CORSRouterDecorator struct {
@@ -199,7 +177,7 @@ func (c *CORSRouterDecorator) ServeHTTP(rw http.ResponseWriter,
 			"Accept, Accept-Language,"+
 				" Content-Type, YourOwnHeader")
 	}
-	// Stop here if its Preflighted OPTIONS request
+	// Stop here if it's a Preflighted OPTIONS request
 	if req.Method == "OPTIONS" {
 		return
 	}

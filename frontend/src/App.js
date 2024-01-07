@@ -1,29 +1,27 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
-import {BrowserRouter as Router, Route, Switch} 
-      from 'react-router-dom'
-import ListUserComponent from './components/ListUserComponent';
+import {BrowserRouter as Router, Route, Switch} from 'react-router-dom'
+import ListReportComponent from './components/ListReportComponent';
 import HeaderComponent from './components/HeaderComponent';
 import FooterComponent from './components/FooterComponent';
-import CreateUserComponent from './components/CreateUserComponent';
-import ViewUserComponent from './components/ViewUserComponent';
+import CreateReportComponent from './components/CreateReportComponent';
+import ViewReportComponent from './components/ViewReportComponent';
+import Home from './components/Home';
+import ScrollToTop from './components/ScrollToTop';
+
 
 function App() {
   return (
     <div>
         <Router>
+          <ScrollToTop />
               <HeaderComponent />
-                <div className="container">
+                <div>
                     <Switch> 
-                          <Route path = "/" exact component =
-                              {ListUserComponent}></Route>
-                          <Route path = "/users" component = 
-                              {ListUserComponent}></Route>
-                          <Route path = "/add-user/:id" component = 
-                              {CreateUserComponent}></Route>
-                          <Route path = "/view-user/:id" component = 
-                              {ViewUserComponent}></Route>
+                          <Route path = "/" exact component = {Home}></Route>
+                          <Route path = "/reports" component = {ListReportComponent}></Route>
+                          <Route path = "/add-report/:id" component = {CreateReportComponent}></Route>
+                          <Route path = "/view-report/:id" component = {ViewReportComponent}></Route>
                          </Switch>
                 </div>
               <FooterComponent />
